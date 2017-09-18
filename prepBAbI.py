@@ -20,13 +20,17 @@ def getArgs(){
 }
 
 
-def removeNums(){
-        a
+def removeNums(line){
+    for 
 }
 
 
-def toLowerCase(word){
+def toLowerCase(lineList){
+    for word in lineList:
 
+    if !isinstance(word, str):
+        sys.exit('ERROR : you can not convert non-str objects to lowercase.')
+    return word.lower()
 }
 
 
