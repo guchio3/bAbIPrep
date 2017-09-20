@@ -1,19 +1,12 @@
 # in the root directory of this repository, run
 # > PYTHONPATH=. python testCodes/test1.py
 
-
-wordDict = {'_' : 0, '-' : 1}
-fin1 = open('datasets/en-valid-10k/qa1_train.txt')
-fin2 = open('datasets/en-valid-10k/qa19_train.txt')
-
 from utils.tools import *
-import numpy as np
+import os
+import sys
 
-for case in fin1.readlines():
-    lineID, questions, answers = lineToValidLists(case, wordDict)
-    print(lineID, questions, answers)
-    print(getOneHots(np.array(questions), len(wordDict)))
+source_dir = 'datasets/en-valid-10k/'
+target_dir = 'datasets/preped/'
+source_files = [source_dir + source_file for source_file in os.listdir(source_dir)]
 
-
-print('wordDict :\t', wordDict)
-
+prepBAbI(source_files, target_dir)
