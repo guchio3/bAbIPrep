@@ -1,0 +1,159 @@
+import numpy as np
+
+import json
+from itertools import chain
+
+
+def lineToValidLists(line, word_dict):
+    '''
+    Change the input line to valid form while storing words to the word set.
+    This function returns 
+
+    Valid form here means that it fills the requirements below.
+        * Symbols '.' and '?' are dealt as separated
+        * Space or tab (' ' or '\t') separated list
+        * Without numbers
+        * With only lowercases
+        ex) 
+         input : '15 Where is Daniel? 	office	10', {'-' : 0, '_' : 1}
+         output : 15 (int), ['where', 'is', 'daniel', '?', '-'], ['_', '_', '_', '_', 'office']
+            , where the word_dict now is {'-' : 0, '_' : 1, 'where' : 2, 'is' : 3, 'daniel' : 4, '?' : 5}
+
+    Parameters
+    ------
+    line : a str object which is a line of 1 sentence in the bAbI dataset.
+    wordSet : a set of the word which appears in the dataset.
+        word_dict should be OrderedDict if you wanna make stable dictionary.
+
+    Returns
+    ------
+    line_id : the ID of the line, which is the first word of each line.
+    question_words : a list of int all the elements of which represent
+                     words in a question data.
+    answer_words : a list of int all the elements of which represent
+                   words in a answer data.
+
+    '''
+    # to deal '.' and '?' as a word, put ' ' before them
+    for i, char in enumerate(line[::-1]):
+        if char in ['.', '?']:
+            line = line[:len(line) - 1 - i] + ' ' + line[len(line) - 1 - i:]
+            # put 2 assumptions
+            #   * that there only 1 '.' or '?' in a line.
+            #   * that there are no \t before '.' and '?'.
+            # this is for speeding up
+            break
+
+    # make list from the line string
+    # we remove numbers here, and store only IDs
+    line_list = line.split()
+    line_id = line_list[0]
+    line_list = line_list[1:-1] if line_list[-1].isdigit() else line_list[1:]
+
+    # update word_dict based on this line while storing answer_words for question lines.
+    # in addition, make question_words and answer_words using index number.
+    answer_flg = False
+    question_words = []
+    answer_words = []
+    for word in line_list:
+        if word not in word_dict:
+            word_dict[word] = len(word_dict)
+        if answer_flg:
+            question_words.append(word_dict['-'])
+            answer_words.append(word_dict[word])
+        else:
+            question_words.append(word_dict[word])
+            answer_words.append(word_dict['_'])
+            if word == '?':
+                answer_flg= True
+
+    return line_id, question_words, answer_words
+
+
+def getOneHots(target_list, dict_size):
+    '''
+    Make onehot vectors from the target_list.
+    Each onehot vectors' dimension is depends on the dict_size.
+    
+    Parameters
+    ------
+    target_list : a list of int which represents a word sequence.
+    dict_size : the size of the word_dict which is used for the target_list.
+                this information is used for the size of onehot vectors.
+
+    Returns
+    ------
+    one_hots : a sequence of onehot vectors.
+    
+    '''
+    one_hots = np.zeros((len(target_list), dict_size))
+    one_hots[np.arange(len(target_list)), target_list] = 1
+    return one_hots
+
+
+def prepBAbI(source_files, target_file):
+    '''
+    the batch size of this dataset is fixed to 1 based on the DNC paper.
+    
+    Parameters
+    ------
+    source_files : a list of str all the elements of which specify
+                   the names of source bAbI data files. 
+    target_file : a str object which specifies the target file in which
+                  you wanna save the preprocessed bAbI dataset. 
+                  the preprocessed bAbI dataset is saved in json format.
+    
+    Returns
+    ------
+    word_dict : 
+    
+    '''
+    if not isinstance(source_files, list):
+        sys.exit('ERROR : source_files must be list object.')
+    if not isinstance(target_file, str):
+        sys.exit('ERROR : target_file must be str object.')
+
+    # load required files
+    fin = open(source_files, 'r')
+    fout = open(target_file, 'w')
+
+    # prepare for dataset conversion
+    line = json.loads(fin.readline())
+    word_dict = {'_' : 0, '-' : 1}
+    former_id = 0
+    story = []
+
+    while(line):
+        line_id, question_words, answer_words = lineToValidLists(line, word_dict)
+        one_hot_question_words = getOneHots(question_words)
+        one_hot_answer_words = getOneHots(answer_words)
+        if former_id < int(line_id):
+            story.append([[one_hot_question_words], [one_hot_answer_words]])
+        else:
+            story = [[[one_hot_question_words], [one_hot_answer_words]]]
+
+
+
+        line = json.loads(fin.readline())
+
+[[[[1.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0], [1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 0.0], [1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]]], [[[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [1.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0], [1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 0.0], [1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0]]]]
+
+
+def saveReversedDict(word_dict, target_dir):
+    '''
+    Save word_dict in the reverse form.
+    This is for understanding the output of models which is 
+    a sequence of onehot vectors.
+
+    The reverse dictionary is saved in json format.
+    
+    Parameters
+    ------
+    word_dict : the word_dict which is made from datasets.
+    target_dir : a str object that specify the target directory 
+        in which you wanna save the reversed_dict.
+
+    '''
+    with open(target_dir, 'w') as fout:
+        reversed_dict = dict(zip(word_dict.values(), word_dict.keys()))
+        font.write(json.dumps(reversed_dict))
