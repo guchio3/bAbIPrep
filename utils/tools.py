@@ -181,7 +181,7 @@ def prepBAbI(source_files, target_dir):
         out_filename = target_dir + source_file.split('/')[-1].split('.')[0] + '.json'
         fout = open(out_filename, 'w')
         for question_story, answer_story in zip(question_stories, answer_stories):
-            fout.write(json.dumps([[question_story], [answer_story]]) + '\n')
+            fout.write(json.dumps([question_story, answer_story]) + '\n')
 
     # save reversed_dict to the specified file.
     # this is used when we understand the inputs and outputs
